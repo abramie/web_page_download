@@ -19,33 +19,36 @@ book = epub.EpubBook()
 # set metadata
 
 
-book.add_author('Author Authorowski')
+book.add_author('Angry squirrel')
 
-url = 'https://boxnovel.com/novel/astral-pet-store-boxnovel'
+url = 'https://boxnovel.com/novel/the-experimental-log-of-the-crazy-lich'
 title = url.split('/')[4]
 book.set_identifier(title)
 book.set_title(title)
 book.set_language('en')
-debut = 76
-fin = 400
+debut = 1
+fin = 841
 start = timeit.timeit()
 spine = ['nav']
 for i in range(debut, fin+1):
     url_chapter = url + '/chapter-' + str(i) +'/'
     http = urllib3.PoolManager()
-    r = http.request('GET',url_chapter )
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.77 Safari/537.36"}
+    
+    r = http.request('GET',url_chapter, headers=headers )
     r.status
     r.data
-    document = html5lib.parse(r.data)
-    #print (r.data)
-    document = html5lib.parse(r.data,namespaceHTMLElements=False)
     
+    document = html5lib.parse(r.data)
+    
+    document = html5lib.parse(r.data,namespaceHTMLElements=False)
     
     
     for meta in document.iter('meta'):
         if meta.attrib.get("property") == "og:title":
-            title_chapter = (meta.attrib.get("content").split('-')[2]) + str(i)
-    print(title_chapter)
+            title_chapter = (meta.attrib.get("content").split('-')[1]) #+ str(i)
+            
+    
     c = epub.EpubHtml(title=title_chapter, file_name='chap_'+str(i)+'.xhtml', lang='hr')
     c.content=u'<h2>'+title_chapter+'</h2>'
     #print(document.iter('div'))
@@ -56,28 +59,62 @@ for i in range(debut, fin+1):
                 text = ''
                 em = para.findtext('em')
                 strong = para.findtext('strong') 
-                if em :
-                    c.content = c.content + '<p><i>' + em + '</i></p>'
-                elif para.text:
-                    c.content = c.content + '<p>'+ para.text +'</p>'
-                    #print(para.text)
-                elif strong :
+                span = para.findtext('span')
+               
                 
-                    c.content = c.content + '<p><b>'+ strong +'</b></p>'
+               
+                c.content = c.content + '<p>'
                 
-                else : 
-                    if para.find('*') and para.findtext('*'):
-                        print("missing text in chapter " + str(i))
-                        print(para.find('*'))
-                        print(para.findtext('*'))
-                    elif para.find('span') and para.find('span').tail:
-                        #print(para.find('span').tail)
+                def add_paragraphe(para):
+                    if para.text:
+                        c.content = c.content + para.text 
+                    for thing in para:
+                        if thing.text:
+                            texte = thing.text
+                            if thing.tag == 'em' :
+                                texte = '<i>'+ texte +'</i>'
+                            if thing.tag == 'strong' :
+                                texte = '<b>'+ texte +'</b>'
+                            c.content = c.content + texte
+                        else:
+                            
+                            if thing.tail:
+                                texte = thing.tail
+                                if thing.tag == 'br':
+                                    texte = '<br>' + texte
+                                if thing.tag == 'em' :
+                                    texte = '<i>'+ texte +'</i>'
+                                if thing.tag == 'strong' :
+                                    texte = '<b>'+ texte +'</b>'
+                                c.content = c.content + texte
+                            else:
+                                add_paragraphe(thing)
+                            
+                add_paragraphe(para)            
+                c.content = c.content + '</p>'
+                # if em :
+                #     c.content = c.content + '<p><i>' + em + '</i></p>'
+                # elif para.text:
+                #     c.content = c.content + '<p>'+ para.text +'</p>'
+                #     #print(para.text)
+                # elif strong :
+                
+                #     c.content = c.content + '<p><b>'+ strong +'</b></p>'
+                # elif span:
+                #       c.content = c.content + '<p>'+ span +'</p>'
+                # else : 
+                #     if para.find('*') and para.findtext('*'):
+                #         print("missing text in chapter " + str(i))
+                #         print(para.find('*'))
+                #         print(para.findtext('*'))
+                #     elif para.find('span') and para.find('span').tail:
+                #         #print(para.find('span').tail)
                         
-                        c.content = c.content + '<p>'+ para.find('span').tail+'</p>'
+                #         c.content = c.content + '<p>'+ para.find('span').tail+'</p>'
                         
-                    elif para.find('strong') and para.find('strong').find('em') and para.find('strong').find('em').text:
-                        #(print(para.find('*').findtext('*'))
-                        c.content = c.content + '<p><b><i>'+ para.find('strong').find('em').text +'</i></b></p>'
+                #     elif para.find('strong') and para.find('strong').find('em') and para.find('strong').find('em').text:
+                #         #(print(para.find('*').findtext('*'))
+                #         c.content = c.content + '<p><b><i>'+ para.find('strong').find('em').text +'</i></b></p>'
                     
                         
                 #print(para.text)
@@ -114,4 +151,4 @@ book.add_item(text_css)
 book.spine = spine
 print("temps complet : " + str(timeit.timeit() - start))
 # write to the file
-epub.write_epub(title+'.epub', book, {})
+epub.write_epub(title+''+'.epub', book, {})
